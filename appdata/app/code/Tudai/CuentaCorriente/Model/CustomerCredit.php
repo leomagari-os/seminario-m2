@@ -35,6 +35,7 @@ class CustomerCredit
      * @var \Magento\Customer\Model\Session
      */
     protected $customerSession;
+    protected $maxOrderPrice;
 
 
     public function __construct(
@@ -52,6 +53,7 @@ class CustomerCredit
     ) {
         //Me traigo por injección de dependencia la sesión del usuario
         $this->customerSession = $customerSession;
+        $this->maxOrderPrice=$scopeConfig->getValue('payment/customer_credit/max_order_price', \Magento\Store\Model\ScopeInterface::SCOPE_STORE);
 
         parent::__construct($context, $registry, $extensionFactory, $customAttributeFactory, $paymentData, $scopeConfig,
             $logger, $resource, $resourceCollection, $data);
@@ -61,6 +63,9 @@ class CustomerCredit
     public function isAvailable(\Magento\Quote\Api\Data\CartInterface $quote = null)
     {
         $isAvailable = parent::isAvailable($quote);
+        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        $cart = $objectManager->get('\Magento\Checkout\Model\Cart');
+        $grandTotal = $cart->getQuote()->getGrandTotal();
 
         //Si ya viene habilitado el método (verificando si está activo)
         if($isAvailable){
@@ -68,6 +73,6 @@ class CustomerCredit
             $isAvailable = (bool) $this->customerSession->getCustomer()->getData('enable_customer_credit');
         }
 
-        return $isAvailable;
+        return (($isAvailable)&&($grandTotal <= $this->maxOrderPrice));
     }
 }
